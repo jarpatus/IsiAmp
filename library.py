@@ -3,8 +3,9 @@ import pprint
 
 class Library:
 
-  def __init__(self, path="./media"):
+  def __init__(self, lcd, path="./media"):
     self.pp = pprint.PrettyPrinter(width=120)
+    self.lcd = lcd
     self.path = path
     self.albums = []
     self.selected_album_index = 0
@@ -16,9 +17,11 @@ class Library:
     for item in sorted(os.listdir(self.path)):
         item_path = os.path.abspath(os.path.join(self.path, item))
         if os.path.isdir(item_path):
+            self.lcd.show_scanning(item, "")
             tracks = []
             for f in sorted(os.listdir(item_path)):
                 if f.lower().endswith(".mp3"):
+                    self.lcd.show_scanning(item, f)
                     f_path = os.path.abspath(os.path.join(item_path, f))
                     tracks.append({"name": f, "path": f_path})
             if tracks:

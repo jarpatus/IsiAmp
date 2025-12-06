@@ -1,0 +1,16 @@
+[Unit]
+Description=mpv media player
+After=local-fs.target sound.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStartPre=rm -f /run/mpv.sock
+ExecStart=/usr/bin/mpv --idle=yes --no-terminal --no-video --audio-display=no --input-ipc-server=/run/mpv.sock --ao=alsa --volume=20
+Restart=always
+RestartSec=5
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
