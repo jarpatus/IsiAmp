@@ -1,0 +1,159 @@
+#!/usr/bin/python
+from time import sleep
+import keyboard
+import queue
+import os
+import pprint
+import json
+import socket
+
+# Scans given path for albums and tracks and populates our global library object. 
+# Albums must be folders on given path and tracks .mp3 files under folders. To be improved 
+# with recursion and support
+# for other media types as well. 
+def scan_library(path):
+    lcd["album"], lcd["track"] = "Scanning...", ""
+    pp.pprint(lcd)
+    library["albums"] = []
+    for item in sorted(os.listdir(path)):
+        item_path = os.path.abspath(os.path.join(path, item))
+        if os.path.isdir(item_path):
+            tracks = []
+            for f in sorted(os.listdir(item_path)):
+                if f.lower().endswith(".mp3"):
+                    f_path = os.path.abspath(os.path.join(item_path, f))
+                    tracks.append({"name": f, "path": f_path})
+            if tracks:
+               library["albums"].append({"name": item, "path": item_path, "tracks": tracks})
+    pp.pprint(library)
+
+def prev_album():
+  library["album"] -= 1
+  library["album"] %= len(library["albums"])
+  library["track"] = 0
+  track_selected()
+
+def next_album():
+  library["album"] += 1
+  library["album"] %= len(library["albums"])
+  library["track"] = 0
+  track_selected()
+
+def prev_track():
+  album = library["albums"][library["album"]]
+  library["track"] -= 1
+  library["track"] %= len(album["tracks"])
+  track_selected()
+
+def next_track():
+  album = library["albums"][library["album"]] 
+  library["track"] += 1
+  library["track"] %= len(album["tracks"])
+  track_selected()
+
+def track_selected():
+  album = library["albums"][library["album"]]
+  track = album["tracks"][library["track"]]
+  mpv_cmd(["loadfile", track["path"]])
+  lcd["album"], lcd["track"] = album["name"], track["name"]
+  pp.pprint(lcd)
+
+def play():
+  library["playing"] = True
+  player_paused()
+
+def pause():
+  library["playing"] = False
+  player_paused()
+
+def play_pause():
+  library["playing"] = not library["playing"]
+  player_paused()
+
+def player_paused(): 
+  mpv_cmd(["set_property", "pause",  not library["playing"]])
+
+def mpv_cmd(cmds): 
+  msg = {"command": cmds}
+  mpv.send((json.dumps(msg) + "\n").encode())
+
+	
+
+# Some debugging and logging
+pp = pprint.PrettyPrinter(width=120)
+
+# Connect to mpv
+# mpv --idle=yes --no-video --input-ipc-server=/tmp/mpvsock
+mpv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+mpv.connect("/tmp/mpvsock")
+
+# Prepare our music library
+library = {
+  "albums": [],
+  "album": 0,
+  "track": 0,
+  "playing": True
+}
+
+# Prepare LCD
+lcd = {
+  "album": "", 
+  "track": "" 
+}
+
+# Create thread safe queue for command read from keyboard
+commands = queue.Queue()
+
+# Setup kebyoard listener, push commands to queue to be processed by main loop
+keyboard.add_hotkey("q", commands.put, args=("prev_album",))
+keyboard.add_hotkey("w", commands.put, args=("prev_track",))
+keyboard.add_hotkey("e", commands.put, args=("play_pause",))
+keyboard.add_hotkey("r", commands.put, args=("next_track",))
+keyboard.add_hotkey("t", commands.put, args=("next_album",))
+
+# Scan music library
+scan_library("./media")
+
+
+#prev_album()
+#prev_album()
+#next_album()
+#next_album()
+#next_album()
+#next_album()
+#prev_album()
+#prev_album()
+#prev_album()
+
+prev_track()
+prev_track()
+prev_track()
+prev_track()
+prev_track()
+next_track()
+next_track()
+next_track()
+next_track()
+next_track()
+next_track()
+next_track()
+
+
+
+# Main loop
+while True:
+  if not commands.empty():
+    cmd = commands.get()
+    match cmd:
+     case "prev_album":
+        prev_album()
+     case "prev_track":
+        prev_track()
+     case "play_pause":
+        play_pause()
+     case "next_track":
+        next_track()
+     case "next_album":
+        next_album()
+	
+  sleep(0.1)
