@@ -11,13 +11,14 @@ class Player:
    self.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
    self.recv_buffer = b""
    self.stopped = True
-   self.track_duration = 0
-   self.track_position = 0
+   self.idle = True
+   self.eof = True
+   self.track_duration = None
+   self.track_position = None
    self.track_album = None
    self.track_artist = None
    self.track_title = None
    self.track_paused = False
-   self.track_eof = False
    self.connect()
    print("Player initialized using path:", self.path)
 
@@ -51,10 +52,12 @@ class Player:
          line, self.recv_buffer = self.recv_buffer.split(b"\n", 1)
          msg = json.loads(line)
          #print("mpv recv:", msg)
-         if msg.get("event") == "property-change" and msg["name"] == "duration":
-           self.track_duration = msg["data"] or 0
+         if msg.get("event") == "idle":
+           self.idle = True
+         elif msg.get("event") == "property-change" and msg["name"] == "duration":
+           self.track_duration = msg["data"]
          elif msg.get("event") == "property-change" and msg["name"] == "time-pos":
-           self.track_position = msg["data"] or 0
+           self.track_position = msg["data"]
          elif msg.get("event") == "property-change" and msg["name"] == "album":
            self.track_album = msg["data"]
          elif msg.get("event") == "property-change" and msg["name"] == "artist":
@@ -69,6 +72,8 @@ class Player:
  def load_file(self, path):
    self.mpv_cmd(["loadfile", path])
    self.stopped = False
+   self.idle = False
+   self.eof = False
 
  def play_pause(self, play=None):
   if not self.stopped:
@@ -83,3 +88,5 @@ class Player:
 
  def tick(self):
   self.mpv_read()
+  if self.track_duration is None and self.track_position is None and self.idle is True:
+    self.eof = True

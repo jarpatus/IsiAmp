@@ -7,7 +7,8 @@ from player import Player
 from lcd import Lcd
 from storage import Storage
 
-removable = True
+removable = False
+#removable = True
 mediapath = "/tmp/media" if removable else "./media"
 devpath = "/dev/sda4"
 syspath = "/sys/block/sda/sda4"
@@ -15,7 +16,7 @@ syspath = "/sys/block/sda/sda4"
 
 if __name__ == "__main__":
   lcd = Lcd()
-  storage = Storage(syspath, devpath, mediapath)
+  storage = Storage(syspath, devpath, mediapath, removable)
   library = Library(lcd, mediapath)
   player = Player()
   commands = queue.Queue()
@@ -56,11 +57,17 @@ if __name__ == "__main__":
           player.load_file(library.get_selected_track_path())
      elif cmd == "eject":
         print("Eject...")
+        lcd.show_ejecting(devpath)
         player.stop()
-        library.empty()
-        storage.eject()
+        if removable:
+          library.empty()
+          time.sleep(1)
+          storage.eject()
 
    player.tick()
+   if player.eof and library.next_track():
+     print("EOF");
+     player.load_file(library.get_selected_track_path())
 
    lcd.show_playing(
      player.track_duration,
@@ -69,8 +76,8 @@ if __name__ == "__main__":
      player.track_artist or "Unknown artist",
      player.track_title or library.get_selected_track_name(),
      player.track_paused,
-     player.track_eof,
-     player.stopped
+     player.stopped,
+     storage.mounted
    )
 
    if removable and (i % 20) == 0:

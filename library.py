@@ -24,7 +24,7 @@ class Library:
             tracks = []
             for f in sorted(os.listdir(item_path)):
                 if f.lower().endswith(".mp3"):
-                    self.lcd.show_scanning(item, f)
+                    #self.lcd.show_scanning(item, f)
                     f_path = os.path.abspath(os.path.join(item_path, f))
                     tracks.append({"name": f, "path": f_path})
             if tracks:
@@ -51,16 +51,22 @@ class Library:
     tracks = self.get_selected_album_tracks()
     if tracks:
       self.selected_track_index -= 1
-      self.selected_track_index %= len(tracks)
-      self.track_selected()
+      if self.selected_track_index < 0:
+        self.prev_album()
+      else:
+        self.selected_track_index %= len(tracks)
+        self.track_selected()
       return True
 
   def next_track(self):
     tracks = self.get_selected_album_tracks()
     if tracks:
       self.selected_track_index += 1
-      self.selected_track_index %= len(tracks)
-      self.track_selected()
+      if self.selected_track_index >= len(tracks):
+        self.next_album()
+      else:
+        self.selected_track_index %= len(tracks)
+        self.track_selected()
       return True
 
   def track_selected(self):
