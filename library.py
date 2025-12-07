@@ -1,5 +1,5 @@
 import os
-import pprint 
+import pprint
 
 class Library:
 
@@ -11,6 +11,9 @@ class Library:
     self.selected_album_index = 0
     self.selected_track_index = 0
     print("Library initialized using path:", self.path)
+
+  def empty(self):
+    self.albums = []
 
   def scan(self):
     self.albums = []
@@ -26,56 +29,83 @@ class Library:
                     tracks.append({"name": f, "path": f_path})
             if tracks:
                self.albums.append({"name": item, "path": item_path, "tracks": tracks})
-    self.pp.pprint(self.albums)
+    #self.pp.pprint(self.albums)
 
   def prev_album(self):
-    self.selected_album_index -= 1
-    self.selected_album_index %= len(self.albums)
-    self.selected_track_index = 0
-    self.track_selected()
+    if self.albums:
+      self.selected_album_index -= 1
+      self.selected_album_index %= len(self.albums)
+      self.selected_track_index = 0
+      self.track_selected()
+      return True
 
   def next_album(self):
-    self.selected_album_index += 1
-    self.selected_album_index %= len(self.albums)
-    self.selected_track_index = 0
-    self.track_selected()
+    if self.albums:
+      self.selected_album_index += 1
+      self.selected_album_index %= len(self.albums)
+      self.selected_track_index = 0
+      self.track_selected()
+      return True
 
   def prev_track(self):
-    self.selected_track_index -= 1
-    self.selected_track_index %= len(self.get_selected_album_tracks())
-    self.track_selected()
+    tracks = self.get_selected_album_tracks()
+    if tracks:
+      self.selected_track_index -= 1
+      self.selected_track_index %= len(tracks)
+      self.track_selected()
+      return True
 
   def next_track(self):
-    self.selected_track_index += 1
-    self.selected_track_index %= len(self.get_selected_album_tracks())
-    self.track_selected()
+    tracks = self.get_selected_album_tracks()
+    if tracks:
+      self.selected_track_index += 1
+      self.selected_track_index %= len(tracks)
+      self.track_selected()
+      return True
 
   def track_selected(self):
     print(f"Album {self.get_selected_album_name()} and track {self.get_selected_track_name()} selected.")
-  
+
   def get_albums(self):
+    if not self.albums:
+      return None
     return self.albums
 
   def get_selected_album(self):
+    if not self.albums:
+      return None
     return self.albums[self.selected_album_index]
 
   def get_selected_album_index(self):
     return self.selected_album_index
 
   def get_selected_album_name(self):
+    if not self.albums:
+      return None
     return self.get_selected_album()["name"]
 
   def get_selected_album_tracks(self):
+    if not self.albums:
+      return None
     return self.get_selected_album()["tracks"]
 
   def get_selected_track(self):
-    return self.get_selected_album_tracks()[self.selected_track_index]
+    tracks = self.get_selected_album_tracks()
+    if not tracks:
+      return None
+    return tracks[self.selected_track_index]
 
   def get_selected_track_index(self):
     return self.selected_track_index
 
   def get_selected_track_path(self):
-    return self.get_selected_track()["path"] 
+    track = self.get_selected_track()
+    if not track:
+      return None
+    return track["path"]
 
   def get_selected_track_name(self):
-    return self.get_selected_track()["name"]
+    track = self.get_selected_track()
+    if not track:
+      return None
+    return track["name"]

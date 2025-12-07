@@ -5,54 +5,63 @@ import time
 from library import Library
 from player import Player
 from lcd import Lcd
+from storage import Storage
 
-def update_lcd(player, lcd):
-  lcd.show_text(
-	f"{library.get_selected_album_index()+1}/{len(library.get_albums())} {library.get_selected_album_name()}",
-	f"{library.get_selected_track_index()+1}/{len(library.get_selected_album_tracks())} {library.get_selected_track_name()}",
-        "Playing..." if player.is_playing() else "Paused" 
-  )
+removable = True
+mediapath = "/tmp/media" if removable else "./media"
+devpath = "/dev/sda4"
+syspath = "/sys/block/sda/sda4"
+
 
 if __name__ == "__main__":
   lcd = Lcd()
-  library = Library(lcd)
+  storage = Storage(syspath, devpath, mediapath)
+  library = Library(lcd, mediapath)
   player = Player()
   commands = queue.Queue()
 
-  library.scan()
-  player.connect()
-  player.load_file(library.get_selected_track_path())
-#  update_lcd(player, lcd)
+  if not removable:
+    library.scan()
+    player.load_file(library.get_selected_track_path())
+    player.play_pause(True)
 
+  i = 0
   keyboard.add_hotkey("7", commands.put, args=("prev_album",))
   keyboard.add_hotkey("6", commands.put, args=("prev_track",))
   keyboard.add_hotkey("5", commands.put, args=("play_pause",))
   keyboard.add_hotkey("4", commands.put, args=("next_track",))
   keyboard.add_hotkey("3", commands.put, args=("next_album",))
-
+  keyboard.add_hotkey("1", commands.put, args=("eject",))
   while True:
    if not commands.empty():
      cmd = commands.get()
      if cmd == "prev_album":
         print("Prev album...")
-        library.prev_album()
-        player.load_file(library.get_selected_track_path())
+        if library.prev_album():
+          player.load_file(library.get_selected_track_path())
      elif cmd == "prev_track":
         print("Prev track...")
-        library.prev_track()
-        player.load_file(library.get_selected_track_path())
+        if library.prev_track():
+          player.load_file(library.get_selected_track_path())
      elif cmd == "play_pause":
         print("Play / pause...")
         player.play_pause()
      elif cmd == "next_track":
-        print("Next tract...")
-        library.next_track()
-        player.load_file(library.get_selected_track_path())
+        print("Next track...")
+        if library.next_track():
+          player.load_file(library.get_selected_track_path())
      elif cmd == "next_album":
         print("Next album...")
-        library.next_album()
-        player.load_file(library.get_selected_track_path())
+        if library.next_album():
+          player.load_file(library.get_selected_track_path())
+     elif cmd == "eject":
+        print("Eject...")
+        player.stop()
+        library.empty()
+        storage.eject()
+
    player.tick()
+
    lcd.show_playing(
      player.track_duration,
      player.track_position,
@@ -61,6 +70,17 @@ if __name__ == "__main__":
      player.track_title or library.get_selected_track_name(),
      player.track_paused,
      player.track_eof,
+     player.stopped
    )
 
-   time.sleep(0.1)
+   if removable and (i % 20) == 0:
+     availability = storage.availability_changed()
+     if availability == True:
+       lcd.show_mounting(devpath)
+       storage.mount()
+       library.scan()
+       player.load_file(library.get_selected_track_path())
+       player.play_pause(True)
+
+   i += 1
+   time.sleep(0.05)

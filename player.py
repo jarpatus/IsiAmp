@@ -10,6 +10,7 @@ class Player:
    self.path = path
    self.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
    self.recv_buffer = b""
+   self.stopped = True
    self.track_duration = 0
    self.track_position = 0
    self.track_album = None
@@ -17,7 +18,11 @@ class Player:
    self.track_title = None
    self.track_paused = False
    self.track_eof = False
+   self.connect()
    print("Player initialized using path:", self.path)
+
+ def __del__(self):
+   self.disconnect()
 
  def connect(self):
    self.socket.connect(self.path)
@@ -63,9 +68,18 @@ class Player:
 
  def load_file(self, path):
    self.mpv_cmd(["loadfile", path])
+   self.stopped = False
 
- def play_pause(self):
-  self.mpv_cmd(["set_property", "pause", not self.track_paused])
+ def play_pause(self, play=None):
+  if not self.stopped:
+    if play is not None:
+      self.mpv_cmd(["set_property", "pause", not play])
+    else:
+      self.mpv_cmd(["set_property", "pause", not self.track_paused])
+
+ def stop(self):
+  self.mpv_cmd(["stop"])
+  self.stopped = True
 
  def tick(self):
   self.mpv_read()
