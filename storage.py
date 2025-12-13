@@ -1,10 +1,16 @@
+import fcntl
 import os
 import subprocess
 
+CDROM_DRIVE_STATUS = 0x5326
+CDS_NO_DISC = 1
+CDS_TRAY_OPEN = 2
+CDS_DRIVE_NOT_READY = 3
+CDS_DISC_OK = 4
+
 class Storage:
 
- def __init__(self, syspath="/sys/block/sda/sda4", devpath="/dev/sda4", mediapath="/tmp/media", removable=True):
-   self.syspath = syspath
+ def __init__(self, devpath="/dev/cdrom", mediapath="/media/cdrom", removable=True):
    self.devpath = devpath
    self.mediapath = mediapath
    self.removable = removable
@@ -16,21 +22,21 @@ class Storage:
  def availability_changed(self):
    if not self.removable:
      return False
-   if (not self.available and os.path.exists(self.syspath)):
+   if (not self.available and self.has_disc()):
      self.available = True
      print(f"Media {self.devpath} became available.")
      return True
-   if (self.available and not os.path.exists(self.syspath)):
-     self.available = False
-     print(f"Media {self.devpath} became un-available.")
-     return False
+   #if (self.available and not has_disc()):
+   #  self.available = False
+   #  print(f"Media {self.devpath} became un-available.")
+   #  return False
    return None
 
  def mount(self):
     if not self.removable:
      return False
     print(f"Mount: {self.devpath}")
-    subprocess.run(["mount", self.devpath, self.mediapath])
+    subprocess.run(["mount", "-o", "ro", "-t", "iso9660,udf", self.devpath, self.mediapath])
     self.mounted = True
 
  def umount(self):
@@ -48,3 +54,11 @@ class Storage:
     print(f"Eject: {self.devpath}")
     subprocess.run(["eject", self.devpath])
     self.available = False
+
+ def has_disc(self):
+    try:
+        with open(self.devpath, "rb", buffering=0) as fd:
+            status = fcntl.ioctl(fd, CDROM_DRIVE_STATUS)
+            return status == CDS_DISC_OK
+    except:
+        return False

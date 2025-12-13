@@ -1,0 +1,17 @@
+[Unit]
+Description=ISI Amp
+After=mpv.service
+Requires=mpv.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/isiamp
+ExecStart=/opt/isiamp/venv/bin/python3 /opt/isiamp/main.py
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

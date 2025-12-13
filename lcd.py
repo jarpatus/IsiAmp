@@ -40,7 +40,7 @@ class Lcd:
         for i, text in enumerate(lines):
             if i >= self.num_lines:
                 break
-            if self.lines[i] != text:
+            if text is not None and self.lines[i] != text:
                 self.lines[i] = text
                 self.lcd.cursor_pos = (i, 0)
                 self.lcd.write_string(text[:20].ljust(20))
@@ -55,7 +55,7 @@ class Lcd:
      "Mounting disc",
      device,
      "",
-     ""
+     "                 ISI"
    )
 
 
@@ -64,7 +64,7 @@ class Lcd:
      "Ejecting disc",
      device,
      "",
-     ""
+     "                 ISI"
    )
 
  def show_scanning(self, path, filename):
@@ -72,14 +72,14 @@ class Lcd:
      "Scanning disc",
      path,
      filename,
-     ""
+     "                 ISI"
    )
 
  def show_playing(self, duration, position, album, artist, title, paused, stopped, mounted):
    if not mounted:
-     self.show_text("No disc", "", "", "")
+     self.show_text("No disc", "", "", "                 ISI")
    elif stopped:
-     self.show_text("Stopped", "", "", "")
+     self.show_text("Stopped", "", "", "                 ISI")
    else:
      duration_minutes = math.floor((duration or 0)/60)
      duration_seconds = math.floor((duration or 0)%60)

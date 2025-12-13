@@ -7,16 +7,14 @@ from player import Player
 from lcd import Lcd
 from storage import Storage
 
-removable = False
-#removable = True
-mediapath = "/tmp/media" if removable else "./media"
-devpath = "/dev/sda4"
-syspath = "/sys/block/sda/sda4"
-
+#removable = False
+removable = True
+mediapath = "/media/cdrom" if removable else "./media"
+devpath = "/dev/cdrom"
 
 if __name__ == "__main__":
   lcd = Lcd()
-  storage = Storage(syspath, devpath, mediapath, removable)
+  storage = Storage(devpath, mediapath, removable)
   library = Library(lcd, mediapath)
   player = Player()
   commands = queue.Queue()
@@ -27,12 +25,12 @@ if __name__ == "__main__":
     player.play_pause(True)
 
   i = 0
-  keyboard.add_hotkey("7", commands.put, args=("prev_album",))
-  keyboard.add_hotkey("6", commands.put, args=("prev_track",))
-  keyboard.add_hotkey("5", commands.put, args=("play_pause",))
+  keyboard.add_hotkey("1", commands.put, args=("prev_album",))
+  keyboard.add_hotkey("2", commands.put, args=("prev_track",))
+  keyboard.add_hotkey("3", commands.put, args=("play_pause",))
   keyboard.add_hotkey("4", commands.put, args=("next_track",))
-  keyboard.add_hotkey("3", commands.put, args=("next_album",))
-  keyboard.add_hotkey("1", commands.put, args=("eject",))
+  keyboard.add_hotkey("5", commands.put, args=("next_album",))
+  keyboard.add_hotkey("7", commands.put, args=("eject",))
   while True:
    if not commands.empty():
      cmd = commands.get()
@@ -55,17 +53,17 @@ if __name__ == "__main__":
         print("Next album...")
         if library.next_album():
           player.load_file(library.get_selected_track_path())
-     elif cmd == "eject":
+     elif cmd == "eject" and removable:
         print("Eject...")
         lcd.show_ejecting(devpath)
         player.stop()
-        if removable:
-          library.empty()
-          time.sleep(1)
-          storage.eject()
+#        if removable:
+        library.empty()
+        time.sleep(1)
+        storage.eject()
 
    player.tick()
-   if player.eof and library.next_track():
+   if player.eof and not player.track_paused and library.next_track():
      print("EOF");
      player.load_file(library.get_selected_track_path())
 
