@@ -63,6 +63,8 @@ class Amp:
            self.eof = False
          elif msg.get("event") == "file-loaded":
            self.loading = False
+         elif msg.get("event") == "end-file" and msg.get("reason") == "error":
+           raise RuntimeError(msg.get("file_error"))
          elif msg.get("event") == "end-file":
            self.eof = True
          elif msg.get("event") == "property-change" and msg.get("name") == "pause":

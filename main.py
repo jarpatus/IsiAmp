@@ -40,26 +40,26 @@ if __name__ == "__main__":
   amp = Amp()
   commands = queue.Queue()
 
-  # Create playlist and start playing from first file
-  scan_and_play(storage, lcd, amp)
-
   # Add hotkey handlers for USB keyboards
   keyboard.add_hotkey("1", commands.put, args=("prev_album",))
   keyboard.add_hotkey("2", commands.put, args=("prev_track",))
   keyboard.add_hotkey("3", commands.put, args=("play_pause",))
   keyboard.add_hotkey("4", commands.put, args=("next_track",))
   keyboard.add_hotkey("5", commands.put, args=("next_album",))
-  keyboard.add_hotkey("6", commands.put, args=("stop_scan",))
+  keyboard.add_hotkey("6", commands.put, args=("source",))
   keyboard.add_hotkey("7", commands.put, args=("eject",))
-  keyboard.add_hotkey("8", commands.put, args=("source",))
+  keyboard.add_hotkey("8", commands.put, args=("stop_scan",))
+
+  # Create playlist and start playing from first file
+  scan_and_play(storage, lcd, amp)
 
   # Main loop
   i = 0
   while True:
 
-   # Read stdin so we can debug over ssh
-   keys = getkeys()
-   for key in keys:
+    # Read stdin so we can debug over ssh
+    keys = getkeys()
+    for key in keys:
      if key == "1":
        commands.put("prev_album")
      elif key == "2":
@@ -71,14 +71,14 @@ if __name__ == "__main__":
      elif key == "5":
        commands.put("next_album")
      elif key == "6":
-       commands.put("stop_scan")
+       commands.put("source")
      elif key == "7":
        commands.put("eject")
      elif key == "8":
-       commands.put("source")
+       commands.put("stop_scan")
 
-   # Process commands queue (async safe)
-   if not commands.empty():
+    # Process commands queue (async safe)
+    if not commands.empty():
      while not commands.empty():
        cmd = commands.get()
      if cmd == "prev_album":
@@ -117,28 +117,27 @@ if __name__ == "__main__":
         print("Eject...")
         lcd.show_ejecting(storage.get_path())
         full_stop(amp, playlist)
-#        if removable:
-#        playlist.empty()
-#        time.sleep(1)
-#        storage.eject()
+        if storage.is_removable():
+          storage.eject()
 
-   amp.tick()
-   if not amp.loading and amp.eof and amp.stopped and not amp.paused and playlist.next_track():
+    # Tick amp (it is synchronous so we need to read messages from IPC like this)
+    amp.tick()
+
+    # Select next track on EOF
+    if not amp.loading and amp.eof and amp.stopped and not amp.paused and playlist.next_track():
      print("EOF")
      amp.load_file(playlist.get_selected_track().get_path())
 
-   # Update LCD
-   lcd.show_playing(amp, storage, playlist)
+    # Update LCD
+    lcd.show_playing(amp, storage, playlist)
 
-#   if removable and (i % 20) == 0:
-#     availability = storage.availability_changed()
-#     if availability == True:
-#       lcd.show_mounting(devpath)
-#       storage.mount()
-#       playlist.scan()
-#       amp.load_file(playlist.get_selected_track_path())
-#       amp.play_pause(True)
+    # Mount removable storage if needed
+    if (i % 20) == 0 and storage.is_removable() and not storage.is_mounted() and storage.is_available():
+       lcd.show_mounting(devpath)
+       if storage.mount():
+         storage.set_spin_speed()
+         scan_and_play(storage, lcd, amp)
 
 #   print(".")
-   i += 1
-   time.sleep(0.05)
+    i += 1
+    time.sleep(0.05)
