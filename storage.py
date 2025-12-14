@@ -10,55 +10,47 @@ CDS_DISC_OK = 4
 
 class Storage:
 
- def __init__(self, devpath="/dev/cdrom", mediapath="/media/cdrom", removable=True):
-   self.devpath = devpath
+ def __init__(self, mediapath, mediadev=None, removable=False):
    self.mediapath = mediapath
+   self.mediadev = mediadev
    self.removable = removable
-   self.available = False if removable else True
    self.mounted = False if removable else True
+   self.available = False if removable else True
    os.makedirs(mediapath, exist_ok=True)
-   print("Storage initialized using path:", self.devpath)
-
- def availability_changed(self):
-   if not self.removable:
-     return False
-   if (not self.available and self.has_disc()):
-     self.available = True
-     print(f"Media {self.devpath} became available.")
-     return True
-   #if (self.available and not has_disc()):
-   #  self.available = False
-   #  print(f"Media {self.devpath} became un-available.")
-   #  return False
-   return None
+   print("Storage initialized.")
 
  def mount(self):
-    if not self.removable:
-     return False
-    print(f"Mount: {self.devpath}")
-    subprocess.run(["mount", "-o", "ro", "-t", "iso9660,udf", self.devpath, self.mediapath])
+    print(f"Mount: {self.removabledev}")
+    subprocess.run(["mount", "-o", "ro", "-t", "iso9660,udf", self.removabledev, self.removablepath])
     self.mounted = True
 
  def umount(self):
-    if not self.removable:
-     return False
-    print(f"Un-mount: {self.devpath}")
-    subprocess.run(["umount", self.devpath])
+    print(f"Un-mount: {self.removabledev}")
+    subprocess.run(["umount", "-f", self.removabledev])
     self.mounted = False
 
+ def is_mounted(self):
+    return self.mounted
+
  def eject(self):
-    if not self.removable:
-     return False
-    if self.mounted:
+    if self.removable_mounted:
       self.umount()
-    print(f"Eject: {self.devpath}")
-    subprocess.run(["eject", self.devpath])
+    print(f"Eject: {self.removabledev}")
+    subprocess.run(["eject", self.removabledev])
     self.available = False
 
- def has_disc(self):
+ def is_removable(self):
+    return self.removable
+
+ def is_available(self):
+    if not self.mediadev:
+      return False
     try:
-        with open(self.devpath, "rb", buffering=0) as fd:
+        with open(self.mediadev, "rb", buffering=0) as fd:
             status = fcntl.ioctl(fd, CDROM_DRIVE_STATUS)
             return status == CDS_DISC_OK
     except:
         return False
+
+ def get_path(self):
+    return self.mediapath
