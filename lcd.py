@@ -1,4 +1,5 @@
-use_lcd = False
+use_lcd = True
+lcd_to_stdout = False
 
 import pprint
 import math
@@ -51,7 +52,8 @@ class Lcd:
                   self.lcd.write_string(text[:20].ljust(20))
                 updated = True
         if updated:
-          self.pp.pprint(self.lines)
+          if lcd_to_stdout:
+            self.pp.pprint(self.lines)
           updated = False
 
 

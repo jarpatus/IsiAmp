@@ -23,15 +23,17 @@ class Storage:
     print(f"Set spin speed to {speed}: {self.mediadev}")
     if not self.mediadev or not self.removable:
       return False
-    result = subprocess.run(["eject", "-x", speed, self.mediadev])
-    return result.exitcode == 0
+    #result = subprocess.run(["eject", "-x", str(speed), self.mediadev])
+    result = subprocess.run(["hdparm", "-E", str(speed), self.mediadev])
+    return result.returncode == 0
 
  def mount(self):
     print(f"Mount: {self.mediadev}")
     if not self.mediadev or not self.removable:
       return False
+    subprocess.run(["umount", "-f", self.mediadev])
     result = subprocess.run(["mount", "-o", "ro", "-t", "iso9660,udf", self.mediadev, self.mediapath])
-    if result.exitcode == 0:
+    if result.returncode == 0:
       self.mounted = True
       return True
     return False
@@ -41,7 +43,7 @@ class Storage:
     if not self.mediadev or not self.removable:
       return False
     result = subprocess.run(["umount", "-f", self.mediadev])
-    if result.exitcode == 0:
+    if result.returncode == 0:
       self.mounted = False
       return True
     return False
@@ -57,7 +59,7 @@ class Storage:
         return False
     print(f"Eject: {self.mediadev}")
     result = subprocess.run(["eject", self.mediadev])
-    if result.exitcode == 0:
+    if result.returncode == 0:
       self.available = False
       return True
     return False
@@ -77,3 +79,6 @@ class Storage:
 
  def get_path(self):
     return self.mediapath
+
+ def get_device(self):
+    return self.mediadev

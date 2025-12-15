@@ -15,9 +15,11 @@ from amp import Amp
 
 sources = [
   {"name": "Internal1", "path": "./media", "device": None, "removable": False},
-  {"name": "Internal2", "path": "./media2", "device": None, "removable": True},
-#  {"name": "Removable", "path": "/media/cdrom", "device": "/dev/cdrom", "removable": True},
+#  {"name": "Internal2", "path": "./media2", "device": None, "removable": True},
+  {"name": "Removable", "path": "/media/cdrom", "device": "/dev/cdrom", "removable": True},
 ]
+
+use_stdin = False
 
 def scan_and_play(storage, lcd, amp):
   playlist.scan(storage.get_path(), lcd)
@@ -58,23 +60,24 @@ if __name__ == "__main__":
   while True:
 
     # Read stdin so we can debug over ssh
-    keys = getkeys()
-    for key in keys:
-     if key == "1":
+    if use_stdin:
+     keys = getkeys()
+     for key in keys:
+      if key == "1":
        commands.put("prev_album")
-     elif key == "2":
+      elif key == "2":
        commands.put("prev_track")
-     elif key == "3":
+      elif key == "3":
        commands.put("play_pause")
-     elif key == "4":
+      elif key == "4":
        commands.put("next_track")
-     elif key == "5":
+      elif key == "5":
        commands.put("next_album")
-     elif key == "6":
+      elif key == "6":
        commands.put("source")
-     elif key == "7":
+      elif key == "7":
        commands.put("eject")
-     elif key == "8":
+      elif key == "8":
        commands.put("stop_scan")
 
     # Process commands queue (async safe)
@@ -112,7 +115,8 @@ if __name__ == "__main__":
         source_index += 1
         source_index %= len(sources)
         storage = Storage(sources[source_index]["path"], sources[source_index]["device"], sources[source_index]["removable"])
-        scan_and_play(storage, lcd, amp)
+        if not storage.is_removable():
+          scan_and_play(storage, lcd, amp)
      elif cmd == "eject":
         print("Eject...")
         lcd.show_ejecting(storage.get_path())
@@ -128,15 +132,15 @@ if __name__ == "__main__":
      print("EOF")
      amp.load_file(playlist.get_selected_track().get_path())
 
-    # Update LCD
-    lcd.show_playing(amp, storage, playlist)
-
     # Mount removable storage if needed
     if (i % 20) == 0 and storage.is_removable() and not storage.is_mounted() and storage.is_available():
-       lcd.show_mounting(devpath)
+       lcd.show_mounting(storage.get_device())
        if storage.mount():
          storage.set_spin_speed()
          scan_and_play(storage, lcd, amp)
+
+    # Update LCD
+    lcd.show_playing(amp, storage, playlist)
 
 #   print(".")
     i += 1
